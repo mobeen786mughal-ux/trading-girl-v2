@@ -17,10 +17,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter
+      - name: Setup Flutter - PURANA WALA - Kotlin 1.7.10 se khush!
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.16.9'
           channel: 'stable'
 
       - name: Create Project Files
@@ -38,7 +38,7 @@ jobs:
             flutter:
               sdk: flutter
             http: ^1.1.0
-            flutter_tts: ^4.0.2
+            flutter_tts: ^3.2.0
           dev_dependencies:
             flutter_lints: ^3.0.0
           flutter:
@@ -322,40 +322,9 @@ jobs:
           }
           JAVA
 
+          # ===== Sirf Manifest Fix - Kotlin Fix ki zaroorat hi nahi - Purana combo hai! =====
           python3 << 'PY'
-          import pathlib, re, glob
-          # ===== KOTLIN FIX - SAB JAGAH 1.7.10 ko 1.9.24 kar do! =====
-          for fname in glob.glob("android/**/*.gradle", recursive=True) + glob.glob("android/**/*.gradle.kts", recursive=True):
-              p = pathlib.Path(fname)
-              t = p.read_text()
-              orig = t
-              # Seedha string replace - regex ka chakkar nahi!
-              t = t.replace("1.7.10", "1.9.24")
-              t = t.replace("1.8.0", "1.9.24")
-              t = t.replace("1.8.10", "1.9.24")
-              t = t.replace("1.9.0", "1.9.24")
-              # ext.kotlin_version wala bhi
-              t = re.sub(r"ext\.kotlin_version\s*=\s*['\"][^'\"]+['\"]", "ext.kotlin_version = '1.9.24'", t)
-              t = re.sub(r'kotlin\.android"\s+version\s+"[^"]+"', 'kotlin.android" version "1.9.24"', t)
-              if t != orig:
-                  p.write_text(t)
-                  print(f"FIXED Kotlin in {fname} -> 1.9.24")
-              else:
-                  print(f"No Kotlin in {fname}")
-
-          # ===== minSdk 24 Fix =====
-          p = pathlib.Path("android/app/build.gradle")
-          t = p.read_text()
-          t = re.sub(r"minSdk\s*=\s*flutter\.minSdkVersion", "minSdk = 24", t)
-          t = re.sub(r"minSdkVersion\s+flutter\.minSdkVersion", "minSdkVersion 24", t)
-          t = re.sub(r"minSdkVersion\s+21", "minSdkVersion 24", t)
-          t = re.sub(r"minSdk\s*=\s*21", "minSdk = 24", t)
-          if "minSdk" not in t:
-              t = t.replace("defaultConfig {", "defaultConfig {\n        minSdk = 24")
-          p.write_text(t)
-          print("minSdk FIXED to 24")
-
-          # ===== Manifest Fix =====
+          import pathlib
           p2 = pathlib.Path("android/app/src/main/AndroidManifest.xml")
           t2 = p2.read_text()
           if "SYSTEM_ALERT_WINDOW" not in t2:
