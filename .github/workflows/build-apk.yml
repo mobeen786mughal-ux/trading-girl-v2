@@ -11,6 +11,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ===== YE NAYA STEP HAI - JAVA FIX! =====
+      - name: Setup Java 17 - Flutter 3.22 ko yehi chahiye!
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -19,7 +26,6 @@ jobs:
 
       - name: Create Project Files
         run: |
-          # 1. Pehle poora Flutter project banao - Is se android/ folder poora banega!
           flutter create --project-name trading_girl --org com.tradinggirl . || true
 
           cat > pubspec.yaml << 'EOF'
@@ -269,15 +275,12 @@ jobs:
           }
           EOF
 
-          # ===== Manifest ko OVERWRITE nahi - Sirf Permission ADD karo! =====
           python3 << 'PY'
           import pathlib
           p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
           t = p.read_text()
           if "SYSTEM_ALERT_WINDOW" not in t:
-              t = t.replace("<manifest", '<manifest xmlns:tools="http://schemas.android.com/tools"', 1)
               t = t.replace('</manifest>', '    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>')
-          # Overlay ke liye Service add karo agar nahi hai
           if "flutterOverlayWindow" not in t:
               t = t.replace('</application>', '        <service android:name="com.example.flutteroverlaywindow.OverlayService" android:foregroundServiceType="dataSync" android:exported="false" />\n    </application>')
           p.write_text(t)
