@@ -16,24 +16,24 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.22.0'
           channel: 'stable'
       - name: Unzip and Build APK
         run: |
           unzip -o trading_girl_v2.zip
-          cp -r trading_girl_v2/* . 2>/dev/null || true
-          cp -r trading_girl_v2/.github . 2>/dev/null || true
-          # Apni files bachao
-          cp -r lib /tmp/my_lib
-          cp pubspec.yaml /tmp/my_pubspec.yaml
-          cp -r assets /tmp/my_assets 2>/dev/null || true
-          rm -rf android ios
-          flutter create . --org com.yourname.tradinggirl --project-name trading_girl_v2 --overwrite
+          ls -la trading_girl_v2/
+          cp -r trading_girl_v2/lib /tmp/my_lib
+          cp trading_girl_v2/pubspec.yaml /tmp/my_pubspec.yaml
+          cp -r trading_girl_v2/assets /tmp/my_assets
+          # Fresh naya project alag jagah banao
+          flutter create /tmp/fresh --org com.yourname.tradinggirl --project-name trading_girl_v2
+          cp -r /tmp/fresh/android ./android
+          cp -r /tmp/fresh/ios ./ios 2>/dev/null || true
           # Apni files wapas daalo
           rm -rf lib
           cp -r /tmp/my_lib lib
           cp /tmp/my_pubspec.yaml pubspec.yaml
-          cp -r /tmp/my_assets assets 2>/dev/null || true
+          cp -r /tmp/my_assets assets
           flutter pub get
           flutter build apk --release
       - name: Upload APK
