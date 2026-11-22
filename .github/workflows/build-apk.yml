@@ -33,14 +33,12 @@ jobs:
           cp -r ./my_assets assets
           python3 << 'PY'
           import pathlib
-          # 1. Awaz fix - agar kahin en-US reh gaya ho to en-IN kar do
           for f in pathlib.Path('lib').rglob('*.dart'):
               txt = f.read_text()
               if 'en-US' in txt or 'en_US' in txt:
                   txt = txt.replace('en-US','en-IN').replace('en_US','en-IN')
                   f.write_text(txt)
                   print(f'AWAZ FIXED: {f}')
-          # 2. pubspec me Floating + TTS wali library pakki karo
           p = pathlib.Path('pubspec.yaml')
           t = p.read_text()
           changed = False
@@ -53,21 +51,18 @@ jobs:
           if changed:
               p.write_text(t)
               print('LIBS ADDED')
-          # 3. INTERNET + FLOATING Permission
           mp = pathlib.Path('android/app/src/main/AndroidManifest.xml')
           mt = mp.read_text()
           if 'android.permission.INTERNET' not in mt:
               mt = mt.replace('<application', '<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <application')
               mp.write_text(mt)
               print('PERMISSIONS ADDED')
-          # 4. minSdk 24
           for fname in ['android/app/build.gradle.kts','android/app/build.gradle']:
               pp = pathlib.Path(fname)
               if pp.exists():
                   tt = pp.read_text()
-                  tt = tt.replace('flutter.minSdkVersion','24').replace('minSdk = 21','minSdk = 24').replace('minSdkVersion 21','minSdkVersion 24')
+                  tt = tt.replace('flutter.minSdkVersion','24').replace('minSdk = 21','minSdk = 24')
                   pp.write_text(tt)
-                  print(f'MINSDK FIXED: {fname}')
           PY
           pip install Pillow
           python3 << 'PY'
@@ -79,7 +74,7 @@ jobs:
                   path = f'android/app/src/main/res/{folder}'
                   os.makedirs(path, exist_ok=True)
                   img.resize((size, size)).save(f'{path}/ic_launcher.png')
-              print('ICON FIXED - TERI WALI GIRL HI HAI')
+              print('ICON FIXED')
           except Exception as e:
               print('Icon fix fail:', e)
           PY
