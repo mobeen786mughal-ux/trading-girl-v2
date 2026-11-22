@@ -232,8 +232,6 @@ jobs:
           }
           EOF
 
-          # ===== JAVA WALA FLOATING - NO KOTLIN LIBRARY! =====
-          # Purani Kotlin wali MainActivity hatao, Java wali banao!
           rm -f android/app/src/main/kotlin/com/tradinggirl/MainActivity.kt
           mkdir -p android/app/src/main/java/com/tradinggirl
           cat > android/app/src/main/java/com/tradinggirl/MainActivity.java << 'JAVA'
@@ -325,7 +323,20 @@ jobs:
           JAVA
 
           python3 << 'PY'
-          import pathlib
+          import pathlib, re
+          # ===== minSdk 24 Fix - YE NAYA HAI! =====
+          p = pathlib.Path("android/app/build.gradle")
+          t = p.read_text()
+          t = re.sub(r"minSdk\s*=\s*flutter\.minSdkVersion", "minSdk = 24", t)
+          t = re.sub(r"minSdkVersion\s+flutter\.minSdkVersion", "minSdkVersion 24", t)
+          t = re.sub(r"minSdkVersion\s+21", "minSdkVersion 24", t)
+          t = re.sub(r"minSdk\s*=\s*21", "minSdk = 24", t)
+          if "minSdk" not in t:
+              t = t.replace("defaultConfig {", "defaultConfig {\n        minSdk = 24")
+          p.write_text(t)
+          print("minSdk FIXED to 24")
+
+          # ===== Manifest Fix =====
           p2 = pathlib.Path("android/app/src/main/AndroidManifest.xml")
           t2 = p2.read_text()
           if "SYSTEM_ALERT_WINDOW" not in t2:
