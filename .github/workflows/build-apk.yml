@@ -31,9 +31,22 @@ jobs:
           cp -r ./my_lib lib
           cp ./my_pubspec.yaml pubspec.yaml
           cp -r ./my_assets assets
-          sed -i "s/minSdkVersion 21/minSdkVersion 24/g" android/app/build.gradle 2>/dev/null || true
-          sed -i "s/minSdk = 21/minSdk = 24/g" android/app/build.gradle.kts 2>/dev/null || true
-          sed -i "s/minSdk 21/minSdk 24/g" android/app/build.gradle.kts 2>/dev/null || true
+          python3 << 'PY'
+          import pathlib
+          # minSdk ko 24 karo - chahe kisi bhi naam se likha ho
+          for fname in ['android/app/build.gradle.kts','android/app/build.gradle']:
+              p = pathlib.Path(fname)
+              if p.exists():
+                  t = p.read_text()
+                  print('BEFORE:', fname)
+                  print(t[:1500])
+                  t = t.replace('flutter.minSdkVersion','24')
+                  t = t.replace('minSdk = 21','minSdk = 24')
+                  t = t.replace('minSdkVersion 21','minSdkVersion 24')
+                  t = t.replace('minSdk 21','minSdk 24')
+                  p.write_text(t)
+                  print('AFTER FIXED:', fname)
+          PY
           pip install Pillow
           python3 << 'PY'
           from PIL import Image
