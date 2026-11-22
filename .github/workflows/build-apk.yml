@@ -16,7 +16,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.22.0'
           channel: 'stable'
       - name: Unzip and Build APK
         run: |
@@ -30,8 +30,8 @@ jobs:
           cp -r /tmp/my_lib lib
           cp /tmp/my_pubspec.yaml pubspec.yaml
           cp -r /tmp/my_assets assets
-          sed -i "s/1.9.0/2.1.0/g" android/settings.gradle android/build.gradle android/app/build.gradle
-          sed -i "s/1.9.22/2.1.0/g" android/settings.gradle android/build.gradle android/app/build.gradle
+          sed -i "s/flutter_tts:.*/flutter_tts: 4.0.2/" pubspec.yaml
+          cat pubspec.yaml
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi android/app/src/main/res/mipmap-xxhdpi android/app/src/main/res/mipmap-xhdpi android/app/src/main/res/mipmap-hdpi android/app/src/main/res/mipmap-mdpi
           for d in mipmap-xxxhdpi mipmap-xxhdpi mipmap-xhdpi mipmap-hdpi mipmap-mdpi; do cp assets/app_icon.png android/app/src/main/res/$d/ic_launcher.png; done
           flutter pub get
