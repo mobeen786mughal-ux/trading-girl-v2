@@ -31,6 +31,10 @@ jobs:
           cp -r ./my_lib lib
           cp ./my_pubspec.yaml pubspec.yaml
           cp -r ./my_assets assets
+          sed -i "s/minSdkVersion 21/minSdkVersion 24/g" android/app/build.gradle
+          sed -i "s/minSdk = 21/minSdk = 24/g" android/app/build.gradle
+          sed -i "s/minSdk 21/minSdk 24/g" android/app/build.gradle
+          cat android/app/build.gradle | grep -i minsdk
           pip install Pillow
           python3 << 'PY'
           from PIL import Image
@@ -43,7 +47,7 @@ jobs:
                   img.resize((size, size)).save(f'{path}/ic_launcher.png')
               print('ICON FIXED - TERI WALI GIRL HI HAI')
           except Exception as e:
-              print('Icon fix fail, default rahega:', e)
+              print('Icon fix fail:', e)
           PY
           rm -rf ./fresh_tmp ./my_lib ./my_pubspec.yaml ./my_assets
           flutter pub get
