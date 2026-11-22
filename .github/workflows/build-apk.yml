@@ -23,8 +23,17 @@ jobs:
           unzip -o trading_girl_v2.zip
           cp -r trading_girl_v2/* . 2>/dev/null || true
           cp -r trading_girl_v2/.github . 2>/dev/null || true
+          # Apni files bachao
+          cp -r lib /tmp/my_lib
+          cp pubspec.yaml /tmp/my_pubspec.yaml
+          cp -r assets /tmp/my_assets 2>/dev/null || true
           rm -rf android ios
           flutter create . --org com.yourname.tradinggirl --project-name trading_girl_v2 --overwrite
+          # Apni files wapas daalo
+          rm -rf lib
+          cp -r /tmp/my_lib lib
+          cp /tmp/my_pubspec.yaml pubspec.yaml
+          cp -r /tmp/my_assets assets 2>/dev/null || true
           flutter pub get
           flutter build apk --release
       - name: Upload APK
