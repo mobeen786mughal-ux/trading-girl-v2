@@ -323,8 +323,27 @@ jobs:
           JAVA
 
           python3 << 'PY'
-          import pathlib, re
-          # ===== minSdk 24 Fix - YE NAYA HAI! =====
+          import pathlib, re, glob
+          # ===== KOTLIN FIX - SAB JAGAH 1.7.10 ko 1.9.24 kar do! =====
+          for fname in glob.glob("android/**/*.gradle", recursive=True) + glob.glob("android/**/*.gradle.kts", recursive=True):
+              p = pathlib.Path(fname)
+              t = p.read_text()
+              orig = t
+              # Seedha string replace - regex ka chakkar nahi!
+              t = t.replace("1.7.10", "1.9.24")
+              t = t.replace("1.8.0", "1.9.24")
+              t = t.replace("1.8.10", "1.9.24")
+              t = t.replace("1.9.0", "1.9.24")
+              # ext.kotlin_version wala bhi
+              t = re.sub(r"ext\.kotlin_version\s*=\s*['\"][^'\"]+['\"]", "ext.kotlin_version = '1.9.24'", t)
+              t = re.sub(r'kotlin\.android"\s+version\s+"[^"]+"', 'kotlin.android" version "1.9.24"', t)
+              if t != orig:
+                  p.write_text(t)
+                  print(f"FIXED Kotlin in {fname} -> 1.9.24")
+              else:
+                  print(f"No Kotlin in {fname}")
+
+          # ===== minSdk 24 Fix =====
           p = pathlib.Path("android/app/build.gradle")
           t = p.read_text()
           t = re.sub(r"minSdk\s*=\s*flutter\.minSdkVersion", "minSdk = 24", t)
