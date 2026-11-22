@@ -17,10 +17,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter
+      - name: Setup Flutter - NAYA WALA - Kotlin pehle se naya!
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.27.0'
           channel: 'stable'
 
       - name: Create Project Files
@@ -39,7 +39,7 @@ jobs:
               sdk: flutter
             http: ^1.1.0
             flutter_tts: ^4.0.2
-            flutter_overlay_window: ^0.4.0
+            flutter_overlay_window: ^0.4.1
           dev_dependencies:
             flutter_lints: ^3.0.0
           flutter:
@@ -274,26 +274,9 @@ jobs:
           }
           EOF
 
+          # ===== Sirf Manifest Fix - Kotlin Fix ki zaroorat nahi - Flutter 3.27 me Kotlin pehle se naya hai! =====
           python3 << 'PY'
-          import pathlib, re
-          # ===== KOTLIN FIX - ASLI JAGAH - settings.gradle + build.gradle DONO! =====
-          for fname in ["android/settings.gradle", "android/build.gradle", "android/app/build.gradle"]:
-              p = pathlib.Path(fname)
-              if not p.exists():
-                  continue
-              t = p.read_text()
-              t = re.sub(r"1\.7\.10", "1.9.24", t)
-              t = re.sub(r"1\.8\.0", "1.9.24", t)
-              t = re.sub(r"1\.8\.10", "1.9.24", t)
-              t = re.sub(r"ext\.kotlin_version\s*=\s*['\"][^'\"]+['\"]", "ext.kotlin_version = '1.9.24'", t)
-              t = re.sub(r'org\.jetbrains\.kotlin\.android"\s+version\s+"[^"]+"', 'org.jetbrains.kotlin.android" version "1.9.24"', t)
-              t = re.sub(r"org\.jetbrains\.kotlin\.android'\s+version\s+'[^']+'", "org.jetbrains.kotlin.android' version '1.9.24'", t)
-              if "kotlin_version" not in t and "kotlin.android" not in t and fname == "android/build.gradle":
-                  t = t.replace("buildscript {", "buildscript {\n    ext.kotlin_version = '1.9.24'")
-              p.write_text(t)
-              print(f"{fname} FIXED to 1.9.24")
-
-          # ===== Manifest Fix =====
+          import pathlib
           p2 = pathlib.Path("android/app/src/main/AndroidManifest.xml")
           t2 = p2.read_text()
           if "SYSTEM_ALERT_WINDOW" not in t2:
