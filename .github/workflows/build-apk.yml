@@ -30,8 +30,18 @@ jobs:
           cp -r /tmp/my_lib lib
           cp /tmp/my_pubspec.yaml pubspec.yaml
           cp -r /tmp/my_assets assets
-          sed -i "s/flutter_tts:.*/flutter_tts: 4.0.2/" pubspec.yaml
-          cat pubspec.yaml
+          python3 -c "
+          import pathlib, re
+          for f in ['android/build.gradle','android/settings.gradle','android/app/build.gradle']:
+              p = pathlib.Path(f)
+              if p.exists():
+                  t = p.read_text()
+                  t = re.sub(r\"kotlin_version\s*=\s*['\\\"]?[0-9.]+['\\\"]?\", \"kotlin_version = '2.1.0'\", t)
+                  t = t.replace('1.9.0','2.1.0').replace('1.9.22','2.1.0').replace('1.9.24','2.1.0')
+                  p.write_text(t)
+                  print(f, 'FIXED')
+                  print(p.read_text()[:800])
+          "
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi android/app/src/main/res/mipmap-xxhdpi android/app/src/main/res/mipmap-xhdpi android/app/src/main/res/mipmap-hdpi android/app/src/main/res/mipmap-mdpi
           for d in mipmap-xxxhdpi mipmap-xxhdpi mipmap-xhdpi mipmap-hdpi mipmap-mdpi; do cp assets/app_icon.png android/app/src/main/res/$d/ic_launcher.png; done
           flutter pub get
