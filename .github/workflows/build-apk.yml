@@ -31,10 +31,10 @@ jobs:
           cp -r ./my_lib lib
           cp ./my_pubspec.yaml pubspec.yaml
           cp -r ./my_assets assets
+          pip install Pillow
           python3 << 'PY'
           from PIL import Image
           import os
-          # Teri wali icon ko sahi size me karo
           try:
               img = Image.open('assets/app_icon.png').convert('RGB')
               for folder, size in [('mipmap-xxxhdpi',192),('mipmap-xxhdpi',144),('mipmap-xhdpi',96),('mipmap-hdpi',72),('mipmap-mdpi',48)]:
