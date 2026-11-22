@@ -17,10 +17,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter - NAYA WALA - Kotlin pehle se naya!
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.0'
+          flutter-version: '3.22.0'
           channel: 'stable'
 
       - name: Create Project Files
@@ -39,7 +39,6 @@ jobs:
               sdk: flutter
             http: ^1.1.0
             flutter_tts: ^4.0.2
-            flutter_overlay_window: ^0.4.1
           dev_dependencies:
             flutter_lints: ^3.0.0
           flutter:
@@ -121,51 +120,13 @@ jobs:
           }
           EOF
 
-          cat > lib/overlay_widget.dart << 'EOF'
-          import 'package:flutter/material.dart';
-          import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-          class OverlayWidget extends StatelessWidget {
-            @override
-            Widget build(BuildContext context) {
-              return Material(
-                color: Colors.transparent,
-                child: Container(
-                  width: 180, height: 220,
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.pink, width: 2)),
-                  padding: EdgeInsets.all(10),
-                  child: Column(children: [
-                    Text("👧 Trading Girl", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.pink)),
-                    SizedBox(height: 6),
-                    StreamBuilder<dynamic>(
-                      stream: FlutterOverlayWindow.overlayListener,
-                      builder: (context, snapshot) {
-                        String txt = "Girl ready hai!";
-                        if (snapshot.hasData) { txt = snapshot.data.toString(); if (txt.length > 70) txt = txt.substring(0,70)+"..."; }
-                        return Expanded(child: SingleChildScrollView(child: Text(txt, textAlign: TextAlign.center, style: TextStyle(fontSize: 11))));
-                      },
-                    ),
-                    SizedBox(height: 6),
-                    ElevatedButton(onPressed: () async { await FlutterOverlayWindow.closeOverlay(); }, style: ElevatedButton.styleFrom(backgroundColor: Colors.pink, minimumSize: Size(double.infinity, 32)), child: Text("❌ Band", style: TextStyle(color: Colors.white, fontSize: 12))),
-                  ]),
-                ),
-              );
-            }
-          }
-          EOF
-
           cat > lib/main.dart << 'EOF'
           import 'package:flutter/material.dart';
+          import 'package:flutter/services.dart';
           import 'package:flutter_tts/flutter_tts.dart';
-          import 'package:flutter_overlay_window/flutter_overlay_window.dart';
           import 'forex_service.dart';
           import 'groq_service.dart';
           import 'floating_girl.dart';
-          import 'overlay_widget.dart';
-
-          @pragma("vm:entry-point")
-          void overlayMain() {
-            runApp(MaterialApp(debugShowCheckedModeBanner: false, home: OverlayWidget()));
-          }
 
           void main() => runApp(TradingGirlApp());
 
@@ -191,6 +152,7 @@ jobs:
             bool showGirl = false;
             bool floatingOn = false;
             final FlutterTts tts = FlutterTts();
+            static const platform = MethodChannel('trading_girl/floating');
 
             @override
             void initState() { super.initState(); _initTts(); }
@@ -222,27 +184,23 @@ jobs:
               String ans = await GroqService.askWithRealCandles(price, List<double>.from(forex['candles']), trend, rsi);
               setState(() { signal = ans; status = "REAL Candle se jawab aa gaya!"; loading = false; showGirl = true; });
               speak(ans);
-              if (floatingOn) { await FlutterOverlayWindow.shareData(signal); }
+              if (floatingOn) { try { await platform.invokeMethod('updateFloating', {'text': ans}); } catch (e) {} }
             }
 
             Future<void> toggleFloating() async {
               try {
-                bool granted = await FlutterOverlayWindow.isPermissionGranted();
-                if (!granted) {
-                  await FlutterOverlayWindow.requestPermission();
-                  setState(() { status = "Floating Permission Allow karo - Phir dobara dabao"; });
-                  return;
-                }
                 if (floatingOn) {
-                  await FlutterOverlayWindow.closeOverlay();
+                  await platform.invokeMethod('hideFloating');
                   setState(() { floatingOn = false; status = "Floating Band ho gayi"; });
                 } else {
-                  await FlutterOverlayWindow.showOverlay(enableDrag: true, overlayTitle: "Trading Girl", overlayContent: "Girl ready hai!", flag: WindowFlag.defaultFlag, visibility: NotificationVisibility.visibilityPublic, positionGravity: PositionGravity.auto, height: 220, width: 180, startPosition: OverlayPosition(0, 100));
-                  await Future.delayed(Duration(milliseconds: 500));
-                  await FlutterOverlayWindow.shareData(signal.isEmpty ? "Girl ready hai! Analyze dabao" : signal);
-                  setState(() { floatingOn = true; status = "Floating ON - Ab Quotex kholo!"; });
+                  bool? ok = await platform.invokeMethod('showFloating', {'text': signal.isEmpty ? "Girl ready hai! Analyze dabao" : signal});
+                  if (ok == true) {
+                    setState(() { floatingOn = true; status = "Floating ON - Ab Quotex kholo! Girl upar tairegi!"; });
+                  } else {
+                    setState(() { status = "Floating Permission Allow karo - Settings > Apps > Trading Girl > Display over other apps > Allow - Phir dobara dabao"; });
+                  }
                 }
-              } catch (e) { setState(() { status = "Floating Error: $e"; }); }
+              } catch (e) { setState(() { status = "Floating Error: $e - Permission Allow karo"; }); }
             }
 
             @override
@@ -274,15 +232,104 @@ jobs:
           }
           EOF
 
-          # ===== Sirf Manifest Fix - Kotlin Fix ki zaroorat nahi - Flutter 3.27 me Kotlin pehle se naya hai! =====
+          # ===== JAVA WALA FLOATING - NO KOTLIN LIBRARY! =====
+          # Purani Kotlin wali MainActivity hatao, Java wali banao!
+          rm -f android/app/src/main/kotlin/com/tradinggirl/MainActivity.kt
+          mkdir -p android/app/src/main/java/com/tradinggirl
+          cat > android/app/src/main/java/com/tradinggirl/MainActivity.java << 'JAVA'
+          package com.tradinggirl;
+          import android.content.Intent;
+          import android.graphics.PixelFormat;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.provider.Settings;
+          import android.view.Gravity;
+          import android.view.MotionEvent;
+          import android.view.View;
+          import android.view.WindowManager;
+          import android.widget.Button;
+          import android.widget.LinearLayout;
+          import android.widget.TextView;
+          import io.flutter.embedding.android.FlutterActivity;
+          import io.flutter.embedding.engine.FlutterEngine;
+          import io.flutter.plugin.common.MethodChannel;
+          public class MainActivity extends FlutterActivity {
+            private static final String CHANNEL = "trading_girl/floating";
+            private WindowManager windowManager;
+            private View floatingView;
+            private TextView floatingText;
+            @Override
+            public void configureFlutterEngine(FlutterEngine flutterEngine) {
+              super.configureFlutterEngine(flutterEngine);
+              new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), CHANNEL).setMethodCallHandler((call, result) -> {
+                if (call.method.equals("showFloating")) {
+                  String text = call.argument("text");
+                  boolean ok = showFloating(text);
+                  result.success(ok);
+                } else if (call.method.equals("hideFloating")) {
+                  hideFloating();
+                  result.success(true);
+                } else if (call.method.equals("updateFloating")) {
+                  String text = call.argument("text");
+                  if (floatingText != null && text != null) floatingText.setText("👧 Trading Girl\n\n" + text);
+                  result.success(true);
+                } else { result.notImplemented(); }
+              });
+            }
+            private boolean showFloating(String text) {
+              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+                return false;
+              }
+              if (floatingView != null) { hideFloating(); }
+              windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+              LinearLayout layout = new LinearLayout(this);
+              layout.setOrientation(LinearLayout.VERTICAL);
+              layout.setBackgroundColor(0xFFFFFFFF);
+              layout.setPadding(20, 20, 20, 20);
+              floatingText = new TextView(this);
+              floatingText.setText("👧 Trading Girl\n\n" + (text == null ? "Girl ready hai!" : text));
+              floatingText.setTextSize(13);
+              floatingText.setTextColor(0xFF000000);
+              layout.addView(floatingText);
+              Button close = new Button(this);
+              close.setText("❌ Band");
+              close.setBackgroundColor(0xFFE91E63);
+              close.setTextColor(0xFFFFFFFF);
+              close.setOnClickListener(v -> hideFloating());
+              layout.addView(close);
+              int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
+              WindowManager.LayoutParams params = new WindowManager.LayoutParams(550, 600, type, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT);
+              params.gravity = Gravity.TOP | Gravity.END;
+              params.x = 10; params.y = 200;
+              floatingView = layout;
+              final WindowManager.LayoutParams p = params;
+              layout.setOnTouchListener(new View.OnTouchListener() {
+                private int lastX, lastY, dx, dy;
+                @Override public boolean onTouch(View v, MotionEvent event) {
+                  switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN: lastX = (int) event.getRawX(); lastY = (int) event.getRawY(); break;
+                    case MotionEvent.ACTION_MOVE: dx = (int) event.getRawX() - lastX; dy = (int) event.getRawY() - lastY; p.x -= dx; p.y += dy; windowManager.updateViewLayout(floatingView, p); lastX = (int) event.getRawX(); lastY = (int) event.getRawY(); break;
+                  }
+                  return true;
+                }
+              });
+              windowManager.addView(floatingView, params);
+              return true;
+            }
+            private void hideFloating() {
+              try { if (floatingView != null && windowManager != null) { windowManager.removeView(floatingView); floatingView = null; floatingText = null; } } catch (Exception e) {}
+            }
+          }
+          JAVA
+
           python3 << 'PY'
           import pathlib
           p2 = pathlib.Path("android/app/src/main/AndroidManifest.xml")
           t2 = p2.read_text()
           if "SYSTEM_ALERT_WINDOW" not in t2:
               t2 = t2.replace('</manifest>', '    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>')
-          if "flutterOverlayWindow" not in t2:
-              t2 = t2.replace('</application>', '        <service android:name="com.example.flutteroverlaywindow.OverlayService" android:foregroundServiceType="dataSync" android:exported="false" />\n    </application>')
           p2.write_text(t2)
           print("Manifest patched OK")
           PY
