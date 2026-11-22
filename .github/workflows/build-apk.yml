@@ -14,11 +14,14 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.9'
+          flutter-version: '3.22.0'
           channel: 'stable'
 
       - name: Create Project Files
         run: |
+          # 1. Pehle poora Flutter project banao - Is se android/ folder poora banega!
+          flutter create --project-name trading_girl --org com.tradinggirl . || true
+
           cat > pubspec.yaml << 'EOF'
           name: trading_girl
           description: Trading Girl - REAL AI Girl
@@ -31,7 +34,7 @@ jobs:
               sdk: flutter
             http: ^1.1.0
             flutter_tts: ^4.0.2
-            system_alert_window: ^1.0.0
+            flutter_overlay_window: ^0.4.0
           dev_dependencies:
             flutter_lints: ^3.0.0
           flutter:
@@ -39,13 +42,10 @@ jobs:
           EOF
 
           mkdir -p lib
-          mkdir -p android/app/src/main
 
-          # ===== forex_service.dart =====
           cat > lib/forex_service.dart << 'EOF'
           import 'dart:convert';
           import 'package:http/http.dart' as http;
-
           class ForexService {
             static Future<Map<String, dynamic>> getRealCandles() async {
               try {
@@ -56,9 +56,7 @@ jobs:
                   double usdRate = (data['rates']['USD'] as num).toDouble();
                   List<double> candles = [];
                   double base = usdRate;
-                  for (int i = 0; i < 10; i++) {
-                    candles.add(base + (i * 0.0001) - 0.0004);
-                  }
+                  for (int i = 0; i < 10; i++) { candles.add(base + (i * 0.0001) - 0.0004); }
                   double last = candles.last;
                   double first = candles.first;
                   String trend = last > first ? "UP" : "DOWN";
@@ -68,18 +66,14 @@ jobs:
                   return {'ok': true, 'price': last, 'candles': candles, 'trend': trend, 'rsi': rsi.toStringAsFixed(1)};
                 }
                 return {'ok': false, 'error': 'API ${res.statusCode}'};
-              } catch (e) {
-                return {'ok': false, 'error': e.toString()};
-              }
+              } catch (e) { return {'ok': false, 'error': e.toString()}; }
             }
           }
           EOF
 
-          # ===== groq_service.dart =====
           cat > lib/groq_service.dart << 'EOF'
           import 'dart:convert';
           import 'package:http/http.dart' as http;
-
           class GroqService {
             static const String apiKey = 'GROQ_API_KEY_PLACEHOLDER';
             static Future<String> askWithRealCandles(double price, List<double> candles, String trend, String rsi) async {
@@ -88,29 +82,20 @@ jobs:
                 final prompt = "You are Trading Girl, a cute trading assistant. EUR/USD price is $price, trend is $trend, RSI is $rsi, last candles: $candles. Give short trading signal in 2-3 simple English sentences. Say CALL or PUT clearly. Speak slowly and clearly.";
                 final res = await http.post(url,
                   headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $apiKey'},
-                  body: jsonEncode({
-                    'model': 'llama-3.3-70b-versatile',
-                    'messages': [{'role': 'user', 'content': prompt}],
-                    'max_tokens': 150,
-                    'temperature': 0.5,
-                  }),
+                  body: jsonEncode({'model': 'llama-3.3-70b-versatile','messages': [{'role': 'user', 'content': prompt}],'max_tokens': 150,'temperature': 0.5,}),
                 ).timeout(Duration(seconds: 20));
                 if (res.statusCode == 200) {
                   final data = jsonDecode(res.body);
                   return data['choices'][0]['message']['content'].toString().trim();
                 }
                 return "Market is $trend. Price is $price. Wait for clear signal. Be careful.";
-              } catch (e) {
-                return "Market is $trend. Price is $price. Wait for clear signal. Be careful.";
-              }
+              } catch (e) { return "Market is $trend. Price is $price. Wait for clear signal. Be careful."; }
             }
           }
           EOF
 
-          # ===== floating_girl.dart =====
           cat > lib/floating_girl.dart << 'EOF'
           import 'package:flutter/material.dart';
-
           class FloatingGirl extends StatelessWidget {
             final String text;
             const FloatingGirl({required this.text});
@@ -119,28 +104,63 @@ jobs:
               return Container(
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.pink.withOpacity(0.3), blurRadius: 10)]),
                 padding: EdgeInsets.all(16),
-                child: Column(
-                  children: [
+                child: Column(children: [
                     Text("👧", style: TextStyle(fontSize: 90)),
                     SizedBox(height: 8),
                     Text("Trading Girl", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.pink)),
                     SizedBox(height: 8),
                     Expanded(child: SingleChildScrollView(child: Text(text, textAlign: TextAlign.center, style: TextStyle(fontSize: 15)))),
-                  ],
+                ]),
+              );
+            }
+          }
+          EOF
+
+          cat > lib/overlay_widget.dart << 'EOF'
+          import 'package:flutter/material.dart';
+          import 'package:flutter_overlay_window/flutter_overlay_window.dart';
+          class OverlayWidget extends StatelessWidget {
+            @override
+            Widget build(BuildContext context) {
+              return Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 180, height: 220,
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.pink, width: 2)),
+                  padding: EdgeInsets.all(10),
+                  child: Column(children: [
+                    Text("👧 Trading Girl", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.pink)),
+                    SizedBox(height: 6),
+                    StreamBuilder<dynamic>(
+                      stream: FlutterOverlayWindow.overlayListener,
+                      builder: (context, snapshot) {
+                        String txt = "Girl ready hai!";
+                        if (snapshot.hasData) { txt = snapshot.data.toString(); if (txt.length > 70) txt = txt.substring(0,70)+"..."; }
+                        return Expanded(child: SingleChildScrollView(child: Text(txt, textAlign: TextAlign.center, style: TextStyle(fontSize: 11))));
+                      },
+                    ),
+                    SizedBox(height: 6),
+                    ElevatedButton(onPressed: () async { await FlutterOverlayWindow.closeOverlay(); }, style: ElevatedButton.styleFrom(backgroundColor: Colors.pink, minimumSize: Size(double.infinity, 32)), child: Text("❌ Band", style: TextStyle(color: Colors.white, fontSize: 12))),
+                  ]),
                 ),
               );
             }
           }
           EOF
 
-          # ===== main.dart - FULL - system_alert_window + Dheere Awaz 0.32 =====
           cat > lib/main.dart << 'EOF'
           import 'package:flutter/material.dart';
           import 'package:flutter_tts/flutter_tts.dart';
-          import 'package:system_alert_window/system_alert_window.dart';
+          import 'package:flutter_overlay_window/flutter_overlay_window.dart';
           import 'forex_service.dart';
           import 'groq_service.dart';
           import 'floating_girl.dart';
+          import 'overlay_widget.dart';
+
+          @pragma("vm:entry-point")
+          void overlayMain() {
+            runApp(MaterialApp(debugShowCheckedModeBanner: false, home: OverlayWidget()));
+          }
 
           void main() => runApp(TradingGirlApp());
 
@@ -168,15 +188,7 @@ jobs:
             final FlutterTts tts = FlutterTts();
 
             @override
-            void initState() {
-              super.initState();
-              _initTts();
-              SystemAlertWindow.registerOnClickListener((tag) {
-                if (tag == "close_btn") {
-                  closeFloating();
-                }
-              });
-            }
+            void initState() { super.initState(); _initTts(); }
 
             Future<void> _initTts() async {
               await tts.setLanguage("en-IN");
@@ -193,82 +205,39 @@ jobs:
                 String slowText = text.replaceAll(". ", "... ").replaceAll("! ", "... ").replaceAll(", ", ", ... ");
                 await tts.speak(slowText);
                 setState(() { status = "Bol rahi hai... 🔊 Dheere dheere"; });
-              } catch (e) {
-                setState(() { status = "Bolne me masla: $e"; });
-              }
+              } catch (e) { setState(() { status = "Bolne me masla: $e"; }); }
             }
 
             Future<void> analyzeReal() async {
               setState(() { loading = true; status = "REAL Candle le rahi hun..."; showGirl = false; });
               final forex = await ForexService.getRealCandles();
-              if (forex['ok'] != true) {
-                setState(() { status = "Price nahi mila: ${forex['error']}"; loading = false; });
-                return;
-              }
-              price = forex['price'];
-              trend = forex['trend'];
-              rsi = forex['rsi'];
+              if (forex['ok'] != true) { setState(() { status = "Price nahi mila: ${forex['error']}"; loading = false; }); return; }
+              price = forex['price']; trend = forex['trend']; rsi = forex['rsi'];
               setState(() { status = "REAL Price: $price | Trend: $trend | RSI: $rsi\nAI soch rahi hai..."; });
               String ans = await GroqService.askWithRealCandles(price, List<double>.from(forex['candles']), trend, rsi);
               setState(() { signal = ans; status = "REAL Candle se jawab aa gaya!"; loading = false; showGirl = true; });
               speak(ans);
-              if (floatingOn) { showFloating(); }
-            }
-
-            Future<void> showFloating() async {
-              bool granted = await SystemAlertWindow.checkPermissions() ?? false;
-              if (!granted) {
-                await SystemAlertWindow.requestPermissions();
-                setState(() { status = "Floating Permission Allow karo - Phir dobara dabao"; });
-                return;
-              }
-              String sig = signal.isEmpty ? "Girl ready hai!" : signal;
-              if (sig.length > 80) sig = sig.substring(0, 80) + "...";
-              await SystemAlertWindow.showSystemWindow(
-                height: 220,
-                width: 180,
-                gravity: SystemWindowGravity.TOP_RIGHT,
-                header: SystemWindowHeader(
-                  title: SystemWindowText(text: "👧 Trading Girl", fontSize: 14, textColor: Colors.pink),
-                  padding: SystemWindowPadding(left: 8, right: 8, top: 8, bottom: 0),
-                  decoration: SystemWindowDecoration(startColor: Colors.pink[100]),
-                ),
-                body: SystemWindowBody(
-                  rows: [
-                    EachRow(columns: [EachColumn(text: SystemWindowText(text: sig, fontSize: 11, textColor: Colors.black))]),
-                    EachRow(columns: [EachColumn(text: SystemWindowText(text: "Price: $price", fontSize: 11, fontWeight: FontWeight.bold, textColor: Colors.green))]),
-                  ],
-                  padding: SystemWindowPadding(left: 8, right: 8, top: 4, bottom: 4),
-                  decoration: SystemWindowDecoration(startColor: Colors.white),
-                ),
-                footer: SystemWindowFooter(
-                  buttons: [
-                    SystemWindowButton(
-                      text: SystemWindowText(text: "❌ Band", fontSize: 12, textColor: Colors.white),
-                      tag: "close_btn",
-                      decoration: SystemWindowDecoration(startColor: Colors.pink, endColor: Colors.pink),
-                      padding: SystemWindowPadding(left: 10, right: 10, top: 4, bottom: 4),
-                    ),
-                  ],
-                  padding: SystemWindowPadding(left: 8, right: 8, top: 4, bottom: 8),
-                  decoration: SystemWindowDecoration(startColor: Colors.white),
-                ),
-                margin: SystemWindowMargin(left: 8, right: 8, top: 100, bottom: 0),
-              );
-              setState(() { floatingOn = true; status = "Floating ON - Ab Quotex kholo, Girl upar tairegi!"; });
-            }
-
-            Future<void> closeFloating() async {
-              await SystemAlertWindow.closeSystemWindow();
-              setState(() { floatingOn = false; status = "Floating Band ho gayi"; });
+              if (floatingOn) { await FlutterOverlayWindow.shareData(signal); }
             }
 
             Future<void> toggleFloating() async {
-              if (floatingOn) {
-                await closeFloating();
-              } else {
-                await showFloating();
-              }
+              try {
+                bool granted = await FlutterOverlayWindow.isPermissionGranted();
+                if (!granted) {
+                  await FlutterOverlayWindow.requestPermission();
+                  setState(() { status = "Floating Permission Allow karo - Phir dobara dabao"; });
+                  return;
+                }
+                if (floatingOn) {
+                  await FlutterOverlayWindow.closeOverlay();
+                  setState(() { floatingOn = false; status = "Floating Band ho gayi"; });
+                } else {
+                  await FlutterOverlayWindow.showOverlay(enableDrag: true, overlayTitle: "Trading Girl", overlayContent: "Girl ready hai!", flag: WindowFlag.defaultFlag, visibility: NotificationVisibility.visibilityPublic, positionGravity: PositionGravity.auto, height: 220, width: 180, startPosition: OverlayPosition(0, 100));
+                  await Future.delayed(Duration(milliseconds: 500));
+                  await FlutterOverlayWindow.shareData(signal.isEmpty ? "Girl ready hai! Analyze dabao" : signal);
+                  setState(() { floatingOn = true; status = "Floating ON - Ab Quotex kholo!"; });
+                }
+              } catch (e) { setState(() { status = "Floating Error: $e"; }); }
             }
 
             @override
@@ -278,73 +247,42 @@ jobs:
                 appBar: AppBar(title: Text("Trading Girl V2 - REAL"), backgroundColor: Colors.pink),
                 body: SingleChildScrollView(
                   padding: EdgeInsets.all(16),
-                  child: Column(
-                    children: [
+                  child: Column(children: [
                       if (price != 0) Card(child: ListTile(title: Text("REAL EUR/USD: $price"), subtitle: Text("Trend: $trend | RSI: $rsi"))),
                       SizedBox(height: 10),
                       Text(status, textAlign: TextAlign.center),
                       SizedBox(height: 10),
                       if (showGirl) Container(height: 380, child: FloatingGirl(text: signal)),
                       SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: loading ? null : analyzeReal,
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.pink, minimumSize: Size(double.infinity, 55)),
-                        child: Text(loading ? "Analyzing REAL Candle..." : "🔍 REAL Analyze Karo", style: TextStyle(fontSize: 18, color: Colors.white)),
-                      ),
+                      ElevatedButton(onPressed: loading ? null : analyzeReal, style: ElevatedButton.styleFrom(backgroundColor: Colors.pink, minimumSize: Size(double.infinity, 55)), child: Text(loading ? "Analyzing REAL Candle..." : "🔍 REAL Analyze Karo", style: TextStyle(fontSize: 18, color: Colors.white))),
                       SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: toggleFloating,
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, minimumSize: Size(double.infinity, 55)),
-                        child: Text(floatingOn ? "❌ Floating Band Karo" : "👧 Floating Girl ON / OFF", style: TextStyle(fontSize: 18, color: Colors.white)),
-                      ),
+                      ElevatedButton(onPressed: toggleFloating, style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, minimumSize: Size(double.infinity, 55)), child: Text(floatingOn ? "❌ Floating Band Karo" : "👧 Floating Girl ON / OFF", style: TextStyle(fontSize: 18, color: Colors.white))),
                       SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: () => speak("Hello, I am Trading Girl. Market is ready. Game on!"),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, minimumSize: Size(double.infinity, 50)),
-                        child: Text("🔊 Awaz Test Karo - Dheere Wali", style: TextStyle(fontSize: 16, color: Colors.white)),
-                      ),
+                      ElevatedButton(onPressed: () => speak("Hello, I am Trading Girl. Market is ready. Game on!"), style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, minimumSize: Size(double.infinity, 50)), child: Text("🔊 Awaz Test Karo - Dheere Wali", style: TextStyle(fontSize: 16, color: Colors.white))),
                       SizedBox(height: 12),
                       Text("Floating: Pehle Floating Button dabao, Permission Allow karo, phir Quotex kholo!", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey)),
                       SizedBox(height: 20),
-                    ],
-                  ),
+                    ]),
                 ),
               );
             }
           }
           EOF
 
-      - name: Setup Android Manifest Permissions
-        run: |
-          mkdir -p android/app/src/main
-          cat > android/app/src/main/AndroidManifest.xml << 'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-              <application
-                  android:label="Trading Girl"
-                  android:name="${applicationName}"
-                  android:icon="@mipmap/ic_launcher">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:launchMode="singleTop"
-                      android:theme="@style/LaunchTheme"
-                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                      android:hardwareAccelerated="true"
-                      android:windowSoftInputMode="adjustResize">
-                      <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme" />
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                  </activity>
-                  <meta-data android:name="flutterEmbedding" android:value="2" />
-              </application>
-          </manifest>
-          EOF
+          # ===== Manifest ko OVERWRITE nahi - Sirf Permission ADD karo! =====
+          python3 << 'PY'
+          import pathlib
+          p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
+          t = p.read_text()
+          if "SYSTEM_ALERT_WINDOW" not in t:
+              t = t.replace("<manifest", '<manifest xmlns:tools="http://schemas.android.com/tools"', 1)
+              t = t.replace('</manifest>', '    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>')
+          # Overlay ke liye Service add karo agar nahi hai
+          if "flutterOverlayWindow" not in t:
+              t = t.replace('</application>', '        <service android:name="com.example.flutteroverlaywindow.OverlayService" android:foregroundServiceType="dataSync" android:exported="false" />\n    </application>')
+          p.write_text(t)
+          print("Manifest patched OK")
+          PY
 
       - name: Inject GROQ Key
         run: |
