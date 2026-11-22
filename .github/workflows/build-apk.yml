@@ -21,19 +21,21 @@ jobs:
       - name: Unzip and Build APK
         run: |
           unzip -o trading_girl_v2.zip
-          cp -r trading_girl_v2/lib /tmp/my_lib
-          cp trading_girl_v2/pubspec.yaml /tmp/my_pubspec.yaml
-          cp -r trading_girl_v2/assets /tmp/my_assets
-          flutter create /tmp/fresh --org com.yourname.tradinggirl --project-name trading_girl_v2
+          cp -r trading_girl_v2/lib ./my_lib
+          cp trading_girl_v2/pubspec.yaml ./my_pubspec.yaml
+          cp -r trading_girl_v2/assets ./my_assets
+          flutter create ./fresh_tmp --org com.yourname.tradinggirl --project-name trading_girl_v2
+          ls ./fresh_tmp/android/
           rm -rf android
-          cp -r /tmp/fresh/android ./android
+          cp -r ./fresh_tmp/android ./android
+          ls ./android/
           rm -rf lib
-          cp -r /tmp/my_lib lib
-          cp /tmp/my_pubspec.yaml pubspec.yaml
-          cp -r /tmp/my_assets assets
-          cat android/settings.gradle | grep kotlin
+          cp -r ./my_lib lib
+          cp ./my_pubspec.yaml pubspec.yaml
+          cp -r ./my_assets assets
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi android/app/src/main/res/mipmap-xxhdpi android/app/src/main/res/mipmap-xhdpi android/app/src/main/res/mipmap-hdpi android/app/src/main/res/mipmap-mdpi
           for d in mipmap-xxxhdpi mipmap-xxhdpi mipmap-xhdpi mipmap-hdpi mipmap-mdpi; do cp assets/app_icon.png android/app/src/main/res/$d/ic_launcher.png; done
+          rm -rf ./fresh_tmp ./my_lib ./my_pubspec.yaml ./my_assets
           flutter pub get
           flutter build apk --release
       - name: Upload APK
