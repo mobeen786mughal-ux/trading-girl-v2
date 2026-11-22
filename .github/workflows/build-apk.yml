@@ -21,19 +21,17 @@ jobs:
       - name: Unzip and Build APK
         run: |
           unzip -o trading_girl_v2.zip
-          ls -la trading_girl_v2/
           cp -r trading_girl_v2/lib /tmp/my_lib
           cp trading_girl_v2/pubspec.yaml /tmp/my_pubspec.yaml
           cp -r trading_girl_v2/assets /tmp/my_assets
-          # Fresh naya project alag jagah banao
           flutter create /tmp/fresh --org com.yourname.tradinggirl --project-name trading_girl_v2
           cp -r /tmp/fresh/android ./android
-          cp -r /tmp/fresh/ios ./ios 2>/dev/null || true
-          # Apni files wapas daalo
           rm -rf lib
           cp -r /tmp/my_lib lib
           cp /tmp/my_pubspec.yaml pubspec.yaml
           cp -r /tmp/my_assets assets
+          sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '2.1.0'/" android/build.gradle
+          sed -i "s/org.jetbrains.kotlin.android version '.*'/org.jetbrains.kotlin.android version '2.1.0'/" android/settings.gradle || true
           flutter pub get
           flutter build apk --release
       - name: Upload APK
