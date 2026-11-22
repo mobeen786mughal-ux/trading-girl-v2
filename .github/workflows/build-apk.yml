@@ -25,16 +25,26 @@ jobs:
           cp trading_girl_v2/pubspec.yaml ./my_pubspec.yaml
           cp -r trading_girl_v2/assets ./my_assets
           flutter create ./fresh_tmp --org com.yourname.tradinggirl --project-name trading_girl_v2
-          ls ./fresh_tmp/android/
           rm -rf android
           cp -r ./fresh_tmp/android ./android
-          ls ./android/
           rm -rf lib
           cp -r ./my_lib lib
           cp ./my_pubspec.yaml pubspec.yaml
           cp -r ./my_assets assets
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi android/app/src/main/res/mipmap-xxhdpi android/app/src/main/res/mipmap-xhdpi android/app/src/main/res/mipmap-hdpi android/app/src/main/res/mipmap-mdpi
-          for d in mipmap-xxxhdpi mipmap-xxhdpi mipmap-xhdpi mipmap-hdpi mipmap-mdpi; do cp assets/app_icon.png android/app/src/main/res/$d/ic_launcher.png; done
+          python3 << 'PY'
+          from PIL import Image
+          import os
+          # Teri wali icon ko sahi size me karo
+          try:
+              img = Image.open('assets/app_icon.png').convert('RGB')
+              for folder, size in [('mipmap-xxxhdpi',192),('mipmap-xxhdpi',144),('mipmap-xhdpi',96),('mipmap-hdpi',72),('mipmap-mdpi',48)]:
+                  path = f'android/app/src/main/res/{folder}'
+                  os.makedirs(path, exist_ok=True)
+                  img.resize((size, size)).save(f'{path}/ic_launcher.png')
+              print('ICON FIXED - TERI WALI GIRL HI HAI')
+          except Exception as e:
+              print('Icon fix fail, default rahega:', e)
+          PY
           rm -rf ./fresh_tmp ./my_lib ./my_pubspec.yaml ./my_assets
           flutter pub get
           flutter build apk --release
