@@ -33,19 +33,22 @@ jobs:
           cp -r ./my_assets assets
           python3 << 'PY'
           import pathlib
-          # minSdk ko 24 karo - chahe kisi bhi naam se likha ho
+          # 1. INTERNET PERMISSION - Yehi asli masla tha!
+          p = pathlib.Path('android/app/src/main/AndroidManifest.xml')
+          t = p.read_text()
+          print('BEFORE MANIFEST:')
+          print(t)
+          if 'android.permission.INTERNET' not in t:
+              t = t.replace('<application', '<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <application')
+              p.write_text(t)
+              print('INTERNET PERMISSION ADDED!')
+          # 2. minSdk 24
           for fname in ['android/app/build.gradle.kts','android/app/build.gradle']:
-              p = pathlib.Path(fname)
-              if p.exists():
-                  t = p.read_text()
-                  print('BEFORE:', fname)
-                  print(t[:1500])
-                  t = t.replace('flutter.minSdkVersion','24')
-                  t = t.replace('minSdk = 21','minSdk = 24')
-                  t = t.replace('minSdkVersion 21','minSdkVersion 24')
-                  t = t.replace('minSdk 21','minSdk 24')
-                  p.write_text(t)
-                  print('AFTER FIXED:', fname)
+              pp = pathlib.Path(fname)
+              if pp.exists():
+                  tt = pp.read_text()
+                  tt = tt.replace('flutter.minSdkVersion','24').replace('minSdk = 21','minSdk = 24').replace('minSdkVersion 21','minSdkVersion 24')
+                  pp.write_text(tt)
           PY
           pip install Pillow
           python3 << 'PY'
