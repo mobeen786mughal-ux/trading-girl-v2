@@ -31,10 +31,9 @@ jobs:
           cp -r ./my_lib lib
           cp ./my_pubspec.yaml pubspec.yaml
           cp -r ./my_assets assets
-          sed -i "s/minSdkVersion 21/minSdkVersion 24/g" android/app/build.gradle
-          sed -i "s/minSdk = 21/minSdk = 24/g" android/app/build.gradle
-          sed -i "s/minSdk 21/minSdk 24/g" android/app/build.gradle
-          cat android/app/build.gradle | grep -i minsdk
+          sed -i "s/minSdkVersion 21/minSdkVersion 24/g" android/app/build.gradle 2>/dev/null || true
+          sed -i "s/minSdk = 21/minSdk = 24/g" android/app/build.gradle.kts 2>/dev/null || true
+          sed -i "s/minSdk 21/minSdk 24/g" android/app/build.gradle.kts 2>/dev/null || true
           pip install Pillow
           python3 << 'PY'
           from PIL import Image
