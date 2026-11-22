@@ -17,7 +17,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter - PURANA WALA - Kotlin 1.7.10 se khush!
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.16.9'
@@ -322,9 +322,26 @@ jobs:
           }
           JAVA
 
-          # ===== Sirf Manifest Fix - Kotlin Fix ki zaroorat hi nahi - Purana combo hai! =====
           python3 << 'PY'
-          import pathlib
+          import pathlib, re
+          # ===== minSdk 21 Fix - YE WALA HAI! =====
+          # Flutter 3.16 me android/app/build.gradle me aisa hota hai:
+          # defaultConfig { minSdkVersion flutter.minSdkVersion ... }
+          # Isko 21 kar do!
+          p = pathlib.Path("android/app/build.gradle")
+          t = p.read_text()
+          print("BEFORE:")
+          print(t[:2000])
+          t = t.replace("flutter.minSdkVersion", "21")
+          t = t.replace("minSdkVersion 19", "minSdkVersion 21")
+          t = t.replace("minSdkVersion 16", "minSdkVersion 21")
+          t = re.sub(r"minSdk\s*=\s*19", "minSdk = 21", t)
+          t = re.sub(r"minSdk\s*=\s*16", "minSdk = 21", t)
+          p.write_text(t)
+          print("AFTER minSdk FIXED to 21")
+          print(p.read_text()[:2000])
+
+          # ===== Manifest Fix =====
           p2 = pathlib.Path("android/app/src/main/AndroidManifest.xml")
           t2 = p2.read_text()
           if "SYSTEM_ALERT_WINDOW" not in t2:
