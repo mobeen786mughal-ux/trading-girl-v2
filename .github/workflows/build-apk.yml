@@ -16,7 +16,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.27.0'
           channel: 'stable'
       - name: Unzip and Build APK
         run: |
@@ -25,31 +25,13 @@ jobs:
           cp trading_girl_v2/pubspec.yaml /tmp/my_pubspec.yaml
           cp -r trading_girl_v2/assets /tmp/my_assets
           flutter create /tmp/fresh --org com.yourname.tradinggirl --project-name trading_girl_v2
+          rm -rf android
           cp -r /tmp/fresh/android ./android
           rm -rf lib
           cp -r /tmp/my_lib lib
           cp /tmp/my_pubspec.yaml pubspec.yaml
           cp -r /tmp/my_assets assets
-          python3 << 'PY'
-          import pathlib
-          # Teri wali saari cheezein check karo
-          print(open('pubspec.yaml').read())
-          print('--- lib files ---')
-          import os
-          print(os.listdir('lib'))
-          print(os.listdir('assets'))
-          # Kotlin ko 2.1.0 karo - dono files me
-          for fname in ['android/settings.gradle','android/build.gradle']:
-              p = pathlib.Path(fname)
-              t = p.read_text()
-              t = t.replace('1.9.0','2.1.0').replace('1.9.22','2.1.0').replace('1.9.24','2.1.0').replace('2.0.0','2.1.0')
-              # agar build.gradle me ext.kotlin_version nahi hai to daal do
-              if fname.endswith('build.gradle') and 'kotlin_version' not in t:
-                  t = t.replace('buildscript {', "buildscript {\n    ext.kotlin_version = '2.1.0'")
-              p.write_text(t)
-              print(fname, 'FIXED')
-              print(t[:1000])
-          PY
+          cat android/settings.gradle | grep kotlin
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi android/app/src/main/res/mipmap-xxhdpi android/app/src/main/res/mipmap-xhdpi android/app/src/main/res/mipmap-hdpi android/app/src/main/res/mipmap-mdpi
           for d in mipmap-xxxhdpi mipmap-xxhdpi mipmap-xhdpi mipmap-hdpi mipmap-mdpi; do cp assets/app_icon.png android/app/src/main/res/$d/ic_launcher.png; done
           flutter pub get
