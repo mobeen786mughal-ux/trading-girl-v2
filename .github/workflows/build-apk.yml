@@ -32,22 +32,82 @@ jobs:
           cp ./my_pubspec.yaml pubspec.yaml
           cp -r ./my_assets assets
           python3 << 'PY'
+          import pathlib, re
+          # 1. pubspec me Floating wali library daalo
+          p = pathlib.Path('pubspec.yaml')
+          t = p.read_text()
+          if 'flutter_overlay_window' not in t:
+              t += "\n  flutter_overlay_window: ^0.4.0\n"
+              p.write_text(t)
+              print('Overlay lib added')
+          # 2. main.dart ko fix karo - Scroll + en-IN + Floating Button
+          for f in pathlib.Path('lib').rglob('*.dart'):
+              txt = f.read_text()
+              orig = txt
+              # Awaz: US se India karo - kyunki India wali chal rahi hai
+              txt = txt.replace('en-US','en-IN').replace('en_US','en-IN').replace('"en"','"en-IN"')
+              # Scroll fix: Column ko Scroll me lapeto
+              if 'SingleChildScrollView' not in txt:
+                  txt = txt.replace('body: Column(', 'body: SingleChildScrollView(child: Column(')
+                  # Aakhri wala Column band karne ke liye - ye simple trick hai
+                  txt = txt.replace('),\n      floatingActionButton', ')),\n      floatingActionButton')
+              # Floating Button add karo agar nahi hai
+              if 'Floating' not in txt and 'flutter_overlay_window' not in txt:
+                  txt = txt.replace("import 'package:flutter/material.dart';", "import 'package:flutter/material.dart';\nimport 'package:flutter_overlay_window/flutter_overlay_window.dart';")
+                  # REAL Analyze Karo wale button ke baad Floating button daalo
+                  txt = txt.replace('REAL Analyze Karo', 'REAL Analyze Karo')
+              f.write_text(txt)
+              if txt != orig:
+                  print(f'FIXED: {f}')
+          print('CODE FIX DONE - Scroll + en-IN')
+          PY
+          # 3. Floating Button ko alag se lib me inject karo - pakka wala tareeka
+          python3 << 'PY'
           import pathlib
-          # 1. INTERNET PERMISSION - Yehi asli masla tha!
+          # main.dart me Floating button ka code daalo
+          mains = list(pathlib.Path('lib').rglob('main.dart'))
+          for f in mains:
+              txt = f.read_text()
+              if 'Floating Girl ON' not in txt:
+                  floating_code = '''
+                    SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () async {
+                        bool ok = await FlutterOverlayWindow.isPermissionGranted();
+                        if (!ok) { await FlutterOverlayWindow.requestPermission(); return; }
+                        if (await FlutterOverlayWindow.isActive()) {
+                          await FlutterOverlayWindow.closeOverlay();
+                        } else {
+                          await FlutterOverlayWindow.showOverlay(enableDrag: true, overlayTitle: "Trading Girl", overlayContent: "Girl Quotex ke upar hai!", flag: OverlayFlag.defaultFlag, visibility: NotificationVisibility.visibilityPublic, positionGravity: PositionGravity.auto, height: 250, width: 200);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+                      child: Text("👧 Floating Girl ON / OFF", style: TextStyle(color: Colors.white)),
+                    ),
+                  '''
+                  # REAL Analyze wale button ke baad daalo, agar na mile to aakhir me
+                  if 'child: Text("REAL Analyze Karo"' in txt:
+                      txt = txt.replace('child: Text("REAL Analyze Karo"', floating_code + '\n                    ElevatedButton(onPressed: () async {}, child: Text("REAL Analyze Karo"')
+                  elif 'REAL Analyze Karo' in txt:
+                      # Seedha us line ke baad
+                      txt = txt.replace('REAL Analyze Karo', 'REAL Analyze Karo",\n                    ),\n                    ' + floating_code + '\n                    ElevatedButton(onPressed: () async {}, child: Text("REAL Analyze Karo')
+                  f.write_text(txt)
+                  print('FLOATING BUTTON ADDED')
+          PY
+          python3 << 'PY'
+          import pathlib
+          # 4. INTERNET + FLOATING Permission + minSdk
           p = pathlib.Path('android/app/src/main/AndroidManifest.xml')
           t = p.read_text()
-          print('BEFORE MANIFEST:')
-          print(t)
           if 'android.permission.INTERNET' not in t:
-              t = t.replace('<application', '<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <application')
+              t = t.replace('<application', '<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <application')
               p.write_text(t)
-              print('INTERNET PERMISSION ADDED!')
-          # 2. minSdk 24
+              print('PERMISSIONS ADDED')
           for fname in ['android/app/build.gradle.kts','android/app/build.gradle']:
               pp = pathlib.Path(fname)
               if pp.exists():
                   tt = pp.read_text()
-                  tt = tt.replace('flutter.minSdkVersion','24').replace('minSdk = 21','minSdk = 24').replace('minSdkVersion 21','minSdkVersion 24')
+                  tt = tt.replace('flutter.minSdkVersion','24').replace('minSdk = 21','minSdk = 24')
                   pp.write_text(tt)
           PY
           pip install Pillow
@@ -60,7 +120,7 @@ jobs:
                   path = f'android/app/src/main/res/{folder}'
                   os.makedirs(path, exist_ok=True)
                   img.resize((size, size)).save(f'{path}/ic_launcher.png')
-              print('ICON FIXED - TERI WALI GIRL HI HAI')
+              print('ICON FIXED')
           except Exception as e:
               print('Icon fix fail:', e)
           PY
