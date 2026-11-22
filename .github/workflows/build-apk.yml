@@ -276,13 +276,22 @@ jobs:
 
           python3 << 'PY'
           import pathlib, re
-          # ===== KOTLIN FIX - YE NAYA HAI! =====
-          p = pathlib.Path("android/build.gradle")
-          t = p.read_text()
-          # Purana kotlin_version jo bhi ho, 1.9.24 kar do
-          t = re.sub(r"ext\.kotlin_version\s*=\s*['\"][^'\"]+['\"]", "ext.kotlin_version = '1.9.24'", t)
-          p.write_text(t)
-          print("Kotlin fixed to 1.9.24")
+          # ===== KOTLIN FIX - ASLI JAGAH - settings.gradle + build.gradle DONO! =====
+          for fname in ["android/settings.gradle", "android/build.gradle", "android/app/build.gradle"]:
+              p = pathlib.Path(fname)
+              if not p.exists():
+                  continue
+              t = p.read_text()
+              t = re.sub(r"1\.7\.10", "1.9.24", t)
+              t = re.sub(r"1\.8\.0", "1.9.24", t)
+              t = re.sub(r"1\.8\.10", "1.9.24", t)
+              t = re.sub(r"ext\.kotlin_version\s*=\s*['\"][^'\"]+['\"]", "ext.kotlin_version = '1.9.24'", t)
+              t = re.sub(r'org\.jetbrains\.kotlin\.android"\s+version\s+"[^"]+"', 'org.jetbrains.kotlin.android" version "1.9.24"', t)
+              t = re.sub(r"org\.jetbrains\.kotlin\.android'\s+version\s+'[^']+'", "org.jetbrains.kotlin.android' version '1.9.24'", t)
+              if "kotlin_version" not in t and "kotlin.android" not in t and fname == "android/build.gradle":
+                  t = t.replace("buildscript {", "buildscript {\n    ext.kotlin_version = '1.9.24'")
+              p.write_text(t)
+              print(f"{fname} FIXED to 1.9.24")
 
           # ===== Manifest Fix =====
           p2 = pathlib.Path("android/app/src/main/AndroidManifest.xml")
