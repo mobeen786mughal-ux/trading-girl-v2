@@ -1,0 +1,37 @@
+name: Build APK
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+      - name: Unzip and Build APK
+        run: |
+          ls -la
+          unzip -o trading_girl_v2.zip
+          ls -la
+          # ZIP ke andar wala folder bahar nikalo
+          cp -r trading_girl_v2/* . 2>/dev/null || cp -r trading_girl_v2/. . 2>/dev/null || true
+          cp -r trading_girl_v2/.github . 2>/dev/null || true
+          ls -la
+          flutter create . --org com.yourname.tradinggirl --project-name trading_girl_v2
+          flutter pub get
+          flutter build apk --release
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: trading-girl-v2-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
