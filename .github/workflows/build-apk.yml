@@ -20,14 +20,11 @@ jobs:
           channel: 'stable'
       - name: Unzip and Build APK
         run: |
-          ls -la
           unzip -o trading_girl_v2.zip
-          ls -la
-          # ZIP ke andar wala folder bahar nikalo
-          cp -r trading_girl_v2/* . 2>/dev/null || cp -r trading_girl_v2/. . 2>/dev/null || true
+          cp -r trading_girl_v2/* . 2>/dev/null || true
           cp -r trading_girl_v2/.github . 2>/dev/null || true
-          ls -la
-          flutter create . --org com.yourname.tradinggirl --project-name trading_girl_v2
+          rm -rf android ios
+          flutter create . --org com.yourname.tradinggirl --project-name trading_girl_v2 --overwrite
           flutter pub get
           flutter build apk --release
       - name: Upload APK
